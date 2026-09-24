@@ -144,15 +144,15 @@ async def get_simulation(
 
 
 @router.get("/simulation-history", response_model=list[FleetSimulationHistory])
-async def get_fleet_simulation_history(session: Session = Depends(get_session)):
-    r = redis.Redis(host="redis", port=6379)
+def get_fleet_simulation_history(session: Session = Depends(get_session)):
+    r = redis.Redis.from_url(os.getenv("CELERY_BACKEND_URL", "redis://redis:6379"))
     return load_fleet_simulation_history(session, r)
 
 
 @router.get("/highlights/latest", response_model=list[SimulationHighlight])
-async def get_fleet_simulation_history_latest(n_simulations: int = 5, session: Session = Depends(get_session)):
+def get_fleet_simulation_history_latest(n_simulations: int = 5, session: Session = Depends(get_session)):
     try:
-        r = redis.Redis.from_url(os.getenv("CELERY_BACKEND_URL"))
+        r = redis.Redis.from_url(os.getenv("CELERY_BACKEND_URL", "redis://redis:6379"))
         return load_simulation_highlights(r=r, session=session, n=n_simulations)
     except ConnectionError as con_error:
         logger.error("Redis connection error, from highlights/latest\n{}".format(con_error))

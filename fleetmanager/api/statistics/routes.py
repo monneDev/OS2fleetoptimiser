@@ -331,7 +331,7 @@ async def get_vehicle_availability(
 
 
 @router.get("/kpis")
-async def get_landing_page_kpi(metrics: List[KPIs] = Query(None), session: Session = Depends(get_session)) -> Dict[str, Any]:
+def get_landing_page_kpi(metrics: List[KPIs] = Query(None), session: Session = Depends(get_session)) -> Dict[str, Any]:
     since_date = date.today() - relativedelta(months=1)
 
     kpi_functions = {

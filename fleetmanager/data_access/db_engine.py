@@ -52,22 +52,55 @@ def engine_creator(
     if db_server is None:
         db_server = os.getenv("DB_SERVER")
 
-    if all((db_name, db_password, db_user, db_url, db_server)):
+    database_config = {
+        "DB_NAME": db_name,
+        "DB_PASSWORD": db_password,
+        "DB_USER": db_user,
+        "DB_URL": db_url,
+        "DB_SERVER": db_server,
+    }
+    configured_values = [value for value in database_config.values() if value]
+
+    if len(configured_values) == len(database_config):
         dsn = f"{db_server}://{db_user}:{db_password}@{db_url}/{db_name}"
         if db_server == "mssql+pyodbc":
-            
-            dsn += "?driver=ODBC+Driver+17+for+SQL+Server"
+            dsn += "?driver=ODBC+Driver+18+for+SQL+Server"
+
+        pool_size = int(os.getenv("DB_POOL_SIZE", "5"))
+        max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "10"))
+        pool_timeout = int(os.getenv("DB_POOL_TIMEOUT", "30"))
+        pool_pre_ping = os.getenv("DB_POOL_PRE_PING", "false").lower() == "true"
+
         db_engine = create_engine(
             dsn,
             pool_recycle=1800,
+            pool_size=pool_size,
+            max_overflow=max_overflow,
+            pool_timeout=pool_timeout,
+            pool_pre_ping=pool_pre_ping,
             # encoding="latin-1",
         )
-    else:
+    elif configured_values:
+        missing = ", ".join(
+            name for name, value in database_config.items() if not value
+        )
+        raise RuntimeError(
+            f"Incomplete database configuration. Missing: {missing}. "
+            "Set all DB_* variables."
+        )
+    elif os.getenv("ALLOW_IN_MEMORY_DATABASE", "false").lower() == "true":
         db_engine = create_engine(
             "sqlite:///file:fleetdb?mode=memory&cache=shared&uri=true",
             connect_args={"check_same_thread": False},
             poolclass=StaticPool,
             # encoding="latin-1",
+        )
+    else:
+        raise RuntimeError(
+            "Database configuration is required. Set DB_SERVER, DB_URL, DB_NAME, "
+            "DB_USER and DB_PASSWORD. In-memory SQLite can only be enabled "
+            "explicitly with ALLOW_IN_MEMORY_DATABASE=true for local development "
+            "or tests."
         )
 
     insp = inspect(db_engine)

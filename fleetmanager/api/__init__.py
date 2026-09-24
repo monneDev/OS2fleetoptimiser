@@ -1,10 +1,13 @@
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import BackgroundTasks, FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_redoc_html
 from fastapi.openapi.utils import get_openapi
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 from fleetmanager.api.configuration.routes import router as configuration_routes
 from fleetmanager.api.fleet_simulation.routes import router as fleet_simulation_routes
@@ -51,6 +54,30 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/healthz", include_in_schema=False)
+async def healthcheck():
+    """Report that the API process is alive without checking dependencies."""
+    return {"status": "ok"}
+
+
+@app.get("/readyz", include_in_schema=False)
+def readinesscheck():
+    """Report whether the API can reach its required SQL database."""
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except SQLAlchemyError:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "not ready",
+                "checks": {"database": "unavailable"},
+            },
+        )
+
+    return {"status": "ok", "checks": {"database": "ok"}}
 
 
 @app.get("/", include_in_schema=False)
