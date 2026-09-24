@@ -4,6 +4,24 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function proxy(req: NextRequest) {
+  if (
+    req.nextUrl.pathname === "/api/fleet" ||
+    req.nextUrl.pathname.startsWith("/api/fleet/")
+  ) {
+    const backendUrl = new URL(
+      process.env.BACKEND_URL ??
+        (process.env.NODE_ENV === "development"
+          ? "http://localhost:3001"
+          : "http://backend:3001"),
+    );
+    const backendPath = req.nextUrl.pathname.slice("/api/fleet".length);
+
+    backendUrl.pathname = `${backendUrl.pathname.replace(/\/$/, "")}${backendPath || "/"}`;
+    backendUrl.search = req.nextUrl.search;
+
+    return NextResponse.rewrite(backendUrl);
+  }
+
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -21,6 +39,6 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|login|api/auth|api/fleet).*)",
+    "/((?!_next/static|_next/image|favicon.ico|login|api/auth).*)",
   ],
 };
