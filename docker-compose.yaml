@@ -22,6 +22,7 @@ services:
       - KEYCLOAK_ISSUER= # the realm authenticator of the keycloak provider
       - NEXTAUTH_SECRET= # a secret for the frontend to validate authentication
       - NEXTAUTH_URL= # host of running application
+      - BACKEND_URL=http://backend:3001
       - ROLE_CHECK= # the matching role from the authentication, if present user must have this attribute
       - ROLE_CHECK_READ= # the matching role if user only has read access
 
