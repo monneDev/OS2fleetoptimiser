@@ -1,0 +1,6 @@
+apiVersion: v2
+name: fleetoptimiser
+description: Helm chart for the OS2 FleetOptimiser application
+type: application
+version: 0.2.0
+appVersion: "latest"

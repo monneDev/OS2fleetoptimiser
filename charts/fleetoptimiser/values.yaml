@@ -1,0 +1,161 @@
+nameOverride: ""
+fullnameOverride: ""
+
+imagePullSecrets: []
+
+serviceAccount:
+  # Create one ServiceAccount per component. Separate accounts give each
+  # component its own mesh identity, which the AuthorizationPolicies rely on.
+  # When false, all pods run as the namespace's default ServiceAccount.
+  create: true
+  # The application does not call the Kubernetes API.
+  automount: false
+  annotations: {}
+
+frontend:
+  enabled: true
+  podAnnotations: {}
+  podLabels: {}
+  replicaCount: 1
+  image:
+    repository: fleetoptimiser-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    port: 3000
+  backendUrl: ""
+  auth:
+    existingSecret: fleetoptimiser-frontend-auth
+    keys:
+      clientId: keycloak-id
+      clientSecret: keycloak-secret
+      issuer: keycloak-issuer
+      authSecret: better-auth-secret
+      authUrl: better-auth-url
+  roleCheck: ""
+  roleCheckRead: ""
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+backend:
+  enabled: true
+  podAnnotations: {}
+  podLabels: {}
+  replicaCount: 1
+  image:
+    repository: fleetoptimiser-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    port: 3001
+  rootPath: /api
+  workers: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+worker:
+  enabled: true
+  podAnnotations: {}
+  podLabels: {}
+  replicaCount: 1
+  logLevel: INFO
+  pool: threads
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+
+runtime:
+  database:
+    server: postgresql+psycopg2
+    host: ""
+    name: fleetoptimiser
+    user: fleetoptimiser
+    poolSize: 5
+    maxOverflow: 10
+    poolTimeout: 30
+    poolPrePing: false
+    passwordSecret:
+      name: fleetoptimiser-postgresql-auth
+      key: password
+  rabbitmq:
+    host: ""
+    port: 5672
+    username: fleetoptimiser
+    passwordSecret:
+      name: fleetoptimiser-rabbitmq-auth
+      key: rabbitmq-password
+  valkey:
+    host: ""
+    port: 6379
+    database: 0
+    username: default
+    passwordSecret:
+      name: fleetoptimiser-valkey-auth
+      key: default
+  celery:
+    queue: fleetoptimiser
+    resultTtlDays: 30
+  seedDummyData: false
+
+# Istio integration. The chart only opts its own workloads into the mesh and
+# adds FleetOptimiser-specific policies; Istio is installed by the platform.
+mesh:
+  enabled: false
+  # Istio revision the pods are injected with (pod label istio.io/rev).
+  revision: default
+  trustDomain: cluster.local
+  # Components that get a sidecar when the mesh is enabled.
+  inject:
+    backend: true
+    frontend: true
+    worker: true
+  peerAuthentication:
+    enabled: true
+    # STRICT rejects plaintext, so every caller of the frontend and backend,
+    # including the ingress, must be part of the mesh. Use PERMISSIVE while
+    # migrating from a non-mesh ingress such as Traefik.
+    mode: STRICT
+  authorizationPolicies:
+    enabled: true
+    frontend:
+      # Mesh identities allowed to reach the frontend, typically the ingress
+      # gateway, e.g. cluster.local/ns/istio-system/sa/istio-gateway-istio.
+      allowedPrincipals: []
+    backend:
+      # Mesh identities allowed to reach the backend in addition to the
+      # frontend, e.g. a load test client.
+      extraAllowedPrincipals: []
+
+# Gateway API route exposing the frontend. The backend is never exposed; the
+# frontend proxies /api/fleet to it.
+httpRoute:
+  enabled: false
+  annotations: {}
+  # e.g. [{name: istio-gateway, namespace: istio-system, sectionName: https}]
+  parentRefs: []
+  hostnames: []
+
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
