@@ -64,7 +64,7 @@ def engine_creator(
     if len(configured_values) == len(database_config):
         dsn = f"{db_server}://{db_user}:{db_password}@{db_url}/{db_name}"
         if db_server == "mssql+pyodbc":
-            dsn += "?driver=ODBC+Driver+18+for+SQL+Server"
+            dsn += "?driver=ODBC+Driver+17+for+SQL+Server"
 
         pool_size = int(os.getenv("DB_POOL_SIZE", "5"))
         max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "10"))

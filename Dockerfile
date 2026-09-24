@@ -43,8 +43,11 @@ RUN /opt/poetry/bin/poetry export --only main --without-hashes \
 
 FROM python:3.11-slim-bookworm AS runtime-base
 
+# PYTHONPATH makes the package importable from any working directory, as the
+# previous `poetry install --only-root` did.
 ENV PATH="/opt/venv/bin:${PATH}" \
     PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/fleetmanager \
     PYTHONUNBUFFERED=1
 
 RUN apt-get update \
@@ -66,20 +69,23 @@ RUN apt-get update \
     && dpkg -i /tmp/packages-microsoft-prod.deb \
     && rm /tmp/packages-microsoft-prod.deb \
     && apt-get update \
-    && ACCEPT_EULA=Y apt-get install --yes --no-install-recommends msodbcsql18 \
+    # The DSN uses ODBC Driver 17, which the previous image got through
+    # mssql-tools. Microsoft only publishes it for amd64 on Debian 12.
+    && if [ "$(dpkg --print-architecture)" = amd64 ]; then odbc17=msodbcsql17; else odbc17=; fi \
+    && ACCEPT_EULA=Y apt-get install --yes --no-install-recommends msodbcsql18 $odbc17 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd --system --gid 10001 fleetoptimiser \
     && useradd --system --uid 10001 --gid fleetoptimiser \
-        --home-dir /app --shell /usr/sbin/nologin fleetoptimiser
+        --home-dir /fleetmanager --shell /usr/sbin/nologin fleetoptimiser
 
-WORKDIR /app
+WORKDIR /fleetmanager
 
 COPY --from=builder /opt/venv /opt/venv
 COPY --chown=fleetoptimiser:fleetoptimiser --exclude=tests fleetmanager ./fleetmanager
 
-RUN mkdir -p /app/running_tasks \
-    && chown fleetoptimiser:fleetoptimiser /app/running_tasks
+RUN mkdir -p /fleetmanager/running_tasks \
+    && chown fleetoptimiser:fleetoptimiser /fleetmanager/running_tasks
 
 USER 10001:10001
 
