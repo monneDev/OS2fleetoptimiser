@@ -1,0 +1,77 @@
+{{- if .Values.mesh.enabled }}
+{{- if .Values.mesh.peerAuthentication.enabled }}
+---
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: {{ include "fleetoptimiser.fullname" . }}
+  labels:
+    {{- include "fleetoptimiser.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "fleetoptimiser.selectorLabels" . | nindent 6 }}
+  mtls:
+    mode: {{ .Values.mesh.peerAuthentication.mode }}
+{{- end }}
+{{- if .Values.mesh.authorizationPolicies.enabled }}
+{{- $frontendInMesh := and .Values.frontend.enabled (include "fleetoptimiser.meshInjected" (dict "root" . "component" "frontend")) }}
+{{- if $frontendInMesh }}
+{{- $principals := .Values.mesh.authorizationPolicies.frontend.allowedPrincipals }}
+{{- if not $principals }}
+{{- fail "mesh.authorizationPolicies.frontend.allowedPrincipals must list the identities allowed to reach the frontend, typically the ingress gateway" }}
+{{- end }}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ include "fleetoptimiser.fullname" . }}-frontend
+  labels:
+    {{- include "fleetoptimiser.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  selector:
+    matchLabels:
+      {{- include "fleetoptimiser.componentSelectorLabels" (dict "root" . "component" "frontend") | nindent 6 }}
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              {{- toYaml $principals | nindent 14 }}
+      to:
+        - operation:
+            ports: [{{ .Values.frontend.service.port | quote }}]
+{{- end }}
+{{- if and .Values.backend.enabled (include "fleetoptimiser.meshInjected" (dict "root" . "component" "backend")) }}
+{{- $principals := .Values.mesh.authorizationPolicies.backend.extraAllowedPrincipals }}
+{{- if $frontendInMesh }}
+{{- $principals = prepend $principals (include "fleetoptimiser.principal" (dict "root" . "component" "frontend")) }}
+{{- end }}
+{{- if not $principals }}
+{{- fail "the backend AuthorizationPolicy has no allowed identities; enable and inject the frontend or set mesh.authorizationPolicies.backend.extraAllowedPrincipals" }}
+{{- end }}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ include "fleetoptimiser.fullname" . }}-backend
+  labels:
+    {{- include "fleetoptimiser.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  selector:
+    matchLabels:
+      {{- include "fleetoptimiser.componentSelectorLabels" (dict "root" . "component" "backend") | nindent 6 }}
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              {{- toYaml $principals | nindent 14 }}
+      to:
+        - operation:
+            ports: [{{ .Values.backend.service.port | quote }}]
+{{- end }}
+{{- end }}
+{{- end }}

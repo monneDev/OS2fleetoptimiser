@@ -1,0 +1,10 @@
+FleetOptimiser {{ .Chart.Version }} has been installed.
+
+Frontend enabled: {{ .Values.frontend.enabled }}
+Backend enabled: {{ .Values.backend.enabled }}
+Worker enabled: {{ .Values.worker.enabled }}
+Service mesh: {{ if .Values.mesh.enabled }}enabled (mTLS {{ .Values.mesh.peerAuthentication.mode }}){{ else }}disabled{{ end }}
+HTTPRoute: {{ .Values.httpRoute.enabled }}
+
+This chart does not install RabbitMQ, Valkey, SQL, Keycloak, the Istio control
+plane or the ingress gateway. Supply those through the platform.

@@ -1,0 +1,54 @@
+{{- if .Values.worker.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "fleetoptimiser.fullname" . }}-worker
+  labels:
+    {{- include "fleetoptimiser.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  replicas: {{ .Values.worker.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "fleetoptimiser.componentSelectorLabels" (dict "root" . "component" "worker") | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.worker.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "fleetoptimiser.componentSelectorLabels" (dict "root" . "component" "worker") | nindent 8 }}
+        {{- with include "fleetoptimiser.meshPodLabels" (dict "root" . "component" "worker") }}
+        {{- . | trim | nindent 8 }}
+        {{- end }}
+        {{- with .Values.worker.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "fleetoptimiser.serviceAccountName" (dict "root" . "component" "worker") }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: worker
+          image: {{ include "fleetoptimiser.backendImage" . }}
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              {{- include "fleetoptimiser.connectionCommand" . | nindent 14 }}
+              exec celery -A fleetmanager.tasks.celery worker \
+                --pool {{ .Values.worker.pool | quote }} \
+                --loglevel {{ .Values.worker.logLevel | quote }}
+          env:
+            {{- include "fleetoptimiser.runtimeEnv" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
+{{- end }}
