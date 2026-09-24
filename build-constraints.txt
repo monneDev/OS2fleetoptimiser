@@ -1,0 +1,2 @@
+# pymssql 2.2.7's source build is incompatible with Cython 3 on ARM64.
+Cython<3

@@ -1,0 +1,13 @@
+.git
+.github
+.pytest_cache
+.venv
+**/__pycache__
+**/*.py[cod]
+*.env
+.dev-env
+.prod-env
+deploy
+fleetoptimiser-frontend
+running_tasks
+samples
