@@ -6,7 +6,7 @@ from typing import Dict, List, TypedDict, Union
 
 import pandas as pd
 from pydantic import ValidationError
-from sqlalchemy import func, select, cast, Numeric
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from typing_extensions import NotRequired
 
@@ -372,7 +372,8 @@ def get_all_configurations_from_db(session: Session):
     return configurations
 
 
-def all_vagt_addresses_sqllite(session):
+def all_vagt_addresses(session):
+    """Load shift settings without relying on database-specific string SQL."""
     vagter = (
         session.query(SimulationSettings)
         .filter(SimulationSettings.name.contains("vagt_"))
@@ -398,54 +399,6 @@ def all_vagt_addresses_sqllite(session):
     ]
 
 
-def all_vagt_address_postgress(session):
-    vagter = (
-        session.query(
-            SimulationSettings.id,
-            SimulationSettings.name,
-            SimulationSettings.value,
-            func.reverse(SimulationSettings.name).label("reversed_name"),
-        )
-        .filter(SimulationSettings.name.like("vagt_%"))
-        .filter(~SimulationSettings.name.like("%dashboard%"))
-    ).subquery()
-    split_expression = func.substring(
-        vagter.c.reversed_name, 1, func.charindex("_", vagter.c.reversed_name) - 1
-    )
-    split_expression_reversed = func.reverse(split_expression)
-
-    vagter_address = (
-        session.query(
-            AllowedStarts.id, AllowedStarts.address, vagter.c.name, vagter.c.value
-        )
-        .join(
-            AllowedStarts, cast(split_expression_reversed, Numeric) == AllowedStarts.id
-        )
-        .all()
-    )
-
-    dashboard_select = (
-        session.query(
-            SimulationSettings.id,
-            SimulationSettings.name,
-            SimulationSettings.value,
-            SimulationSettings.name.label("address"),
-        )
-        .filter(SimulationSettings.name == "vagt_dashboard")
-        .all()
-    )
-
-    return [
-        {
-            "address": entry.address,
-            "location_id": int(entry.id) if "dashboard" not in entry.name else -1,
-            "shifts": literal_eval(entry.value),
-        }
-        for entry in vagter_address + dashboard_select
-        if "None" not in entry.name
-    ]
-
-
 def load_shift_settings(
     session: Session, location: int | None = None, get_all: bool = True
 ):
@@ -461,10 +414,8 @@ def load_shift_settings(
             .filter(SimulationSettings.name == f"vagt_{location}")
             .first()
         )
-    elif get_all and "sqlite" not in session.bind.engine.dialect.name:
-        return all_vagt_address_postgress(session)
     elif get_all:
-        return all_vagt_addresses_sqllite(session)
+        return all_vagt_addresses(session)
 
     if vagt is None:
         return []

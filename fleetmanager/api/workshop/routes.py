@@ -21,7 +21,7 @@ router = APIRouter(prefix="/workshops")
 
 
 @router.get("/settings", response_model=WorkshopSettings)
-async def get_settings(session: Session = Depends(get_session)):
+def get_settings(session: Session = Depends(get_session)):
     """Get the global workshop settings."""
     return get_workshop_settings(session)
 
@@ -36,7 +36,7 @@ async def patch_settings(
 
 
 @router.get("/workshop", response_model=list[Workshop])
-async def get_workshop_info(
+def get_workshop_info(
     session: Session = Depends(get_session),
     workshops: Optional[List[int]] = Query(None),
 ):
@@ -85,7 +85,7 @@ async def delete_existing_workshop(
 
 
 @router.get("/visits", response_model=list[WorkshopVisit])
-async def get_visits(
+def get_visits(
     session: Session = Depends(get_session),
     workshops: Optional[List[int]] = Query(None),
     vehicles: Optional[List[int]] = Query(None),

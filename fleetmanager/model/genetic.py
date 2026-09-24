@@ -5,7 +5,7 @@ import numpy as np
 from datetime import date, datetime, time
 from typing import TypedDict, Tuple
 
-from sqlalchemy import and_, or_, func, text
+from sqlalchemy import and_, or_, func, text, String
 from sqlalchemy.engine.row import Row
 from sqlalchemy.orm import sessionmaker
 
@@ -593,7 +593,7 @@ class FleetHandler:
             return func.group_concat(Cars.id).label('ids')
         elif "sqlite" in self.engine.dialect.name:
             return func.group_concat(Cars.id, ',').label('ids')
-        return text("STRING_AGG(CONVERT(VARCHAR(20), cars.id), ',')")
+        return func.string_agg(Cars.id.cast(String), ',').label('ids')
 
 
 def run_solution_search(

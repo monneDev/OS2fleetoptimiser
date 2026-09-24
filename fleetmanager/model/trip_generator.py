@@ -4,7 +4,7 @@ from datetime import date, datetime, time, timedelta
 
 import numpy as np
 import pandas as pd
-from sqlalchemy import func, literal_column, text
+from sqlalchemy import extract, func, literal_column, text
 from sqlalchemy.orm.query import Query
 from sqlalchemy.engine.base import Engine
 
@@ -572,6 +572,10 @@ def create_query(batch, engine):
         time_difference = func.strftime("%s", RoundTripSegments.end_time) - func.strftime("%s", RoundTripSegments.start_time)
     elif engine.dialect.name == "mysql":
         time_difference = func.timestampdiff(text("SECOND"), RoundTripSegments.start_time, RoundTripSegments.end_time)
+    elif engine.dialect.name == "postgresql":
+        time_difference = extract(
+            "epoch", RoundTripSegments.end_time - RoundTripSegments.start_time
+        )
     else:
         time_difference = func.datediff(literal_column("SECOND"), RoundTripSegments.start_time, RoundTripSegments.end_time)
 

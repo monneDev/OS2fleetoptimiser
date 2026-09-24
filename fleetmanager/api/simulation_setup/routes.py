@@ -56,7 +56,7 @@ async def locations_vehicles(
 
 
 @router.get("/locations", response_model=Locations)
-async def api_locations(session: Session = Depends(get_session)) -> Locations:
+def api_locations(session: Session = Depends(get_session)) -> Locations:
     """
     Get a list of all the locations.
     Used initially on the setup page.

@@ -17,6 +17,8 @@ services:
     depends_on:
       - celery
     env_file: .dev-env
+    environment:
+      - ALLOW_IN_MEMORY_DATABASE=true
     ports:
       - "127.0.0.1:3001:3001"
     networks:
@@ -29,6 +31,8 @@ services:
       - rabbitmq
     command: ["celery", "-A", "fleetmanager.tasks.celery", "worker", "--pool", "threads"]
     env_file: .dev-env
+    environment:
+      - ALLOW_IN_MEMORY_DATABASE=true
     networks:
       - backend_shared
     volumes:
