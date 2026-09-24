@@ -593,7 +593,9 @@ class FleetHandler:
             return func.group_concat(Cars.id).label('ids')
         elif "sqlite" in self.engine.dialect.name:
             return func.group_concat(Cars.id, ',').label('ids')
-        return func.string_agg(Cars.id.cast(String), ',').label('ids')
+        elif "postgresql" in self.engine.dialect.name:
+            return func.string_agg(Cars.id.cast(String), ',').label('ids')
+        return text("STRING_AGG(CONVERT(VARCHAR(20), cars.id), ',')")
 
 
 def run_solution_search(
