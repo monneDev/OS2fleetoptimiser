@@ -5,6 +5,7 @@
 
 # hidden files
 .*
+!charts/fleetoptimiser/.helmignore
 
 # cache files
 *~*

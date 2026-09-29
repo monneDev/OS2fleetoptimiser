@@ -1,0 +1,63 @@
+{{- if .Values.migration.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "fleetoptimiser.fullname" . }}-migration
+  labels:
+    {{- include "fleetoptimiser.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migration
+  annotations:
+    # On first install the ServiceAccount and external Secret must exist before
+    # the Job can start. Upgrades still migrate before workload replacement.
+    helm.sh/hook: post-install,pre-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.migration.backoffLimit }}
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        {{- include "fleetoptimiser.componentSelectorLabels" (dict "root" . "component" "migration") | nindent 8 }}
+        {{- /* A sidecar would keep the Job from completing; mesh.inject has no migration key, so the mesh labels opt it out. */}}
+        {{- with include "fleetoptimiser.meshPodLabels" (dict "root" . "component" "migration") }}
+        {{- . | trim | nindent 8 }}
+        {{- end }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "fleetoptimiser.serviceAccountName" (dict "root" . "component" "backend") }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: migrate
+          image: {{ include "fleetoptimiser.backendImage" . }}
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              python -c 'from fleetmanager.data_access.db_engine import engine_creator; engine_creator()'
+          env:
+            {{- include "fleetoptimiser.databaseEnv" . | nindent 12 }}
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+{{- end }}
