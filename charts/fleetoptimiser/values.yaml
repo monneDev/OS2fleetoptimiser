@@ -3,6 +3,15 @@ fullnameOverride: ""
 
 imagePullSecrets: []
 
+# Shared pod placement. Keep these empty for portable defaults and set them in
+# the environment's values file to match its node pools.
+priorityClassName: ""
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+terminationGracePeriodSeconds: 60
+
 serviceAccount:
   # Create one ServiceAccount per component. Separate accounts give each
   # component its own mesh identity, which the AuthorizationPolicies rely on.
@@ -41,6 +50,19 @@ frontend:
     limits:
       cpu: 500m
       memory: 512Mi
+
+ingress:
+  # Standard Kubernetes Ingress. Install an ingress controller (for example
+  # ingress-nginx) separately.
+  enabled: false
+  className: nginx
+  annotations: {}
+  host: ""
+  path: /
+  pathType: Prefix
+  tls:
+    enabled: false
+    secretName: ""
 
 backend:
   enabled: true
@@ -110,6 +132,63 @@ runtime:
     queue: fleetoptimiser
     resultTtlDays: 30
   seedDummyData: false
+
+# Secret provisioning modes are mutually exclusive:
+# - existing Kubernetes Secrets (the default references above)
+# - secret.create for a temporary/manual installation
+# - vault.enabled when HashiCorp Vault Secrets Operator is installed
+secret:
+  create: false
+  name: fleetoptimiser-secrets
+  values:
+    databasePassword: ""
+    rabbitmqPassword: ""
+    valkeyPassword: ""
+    keycloakClientId: ""
+    keycloakClientSecret: ""
+    keycloakIssuer: ""
+    betterAuthSecret: ""
+    betterAuthUrl: ""
+
+vault:
+  enabled: false
+  authRole: fleetoptimiser
+  mount: kubernetes
+  kvMount: secret
+  secretPath: fleetoptimiser/runtime
+  refreshAfter: 1h
+  rolloutRestart: true
+
+migration:
+  # The application currently creates missing tables through SQLAlchemy. This
+  # Job runs that operation once before application pods are rolled out.
+  enabled: false
+  backoffLimit: 5
+
+pdb:
+  enabled: false
+  minAvailable: 1
+
+vpa:
+  enabled: false
+  updateMode: "Off"
+
+networkPolicy:
+  enabled: false
+  # Labels selecting the ingress controller namespace/pods. Configure these
+  # to match the installed controller.
+  ingressNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: ingress-nginx
+  ingressPodSelector: {}
+
+argocd:
+  enabled: false
+  repoURL: https://github.com/OS2fleetoptimiser/OS2fleetoptimiser.git
+  targetRevision: main
+  chartPath: charts/fleetoptimiser
+  # Relative to chartPath.
+  valueFiles: []
 
 # Istio integration. The chart only opts its own workloads into the mesh and
 # adds FleetOptimiser-specific policies; Istio is installed by the platform.

@@ -32,7 +32,7 @@ app.kubernetes.io/component: {{ .component }}
 {{- printf "%s:%s" .Values.backend.image.repository (.Values.backend.image.tag | default .Chart.AppVersion) }}
 {{- end }}
 
-{{- define "fleetoptimiser.runtimeEnv" -}}
+{{- define "fleetoptimiser.databaseEnv" -}}
 - name: DB_SERVER
   value: {{ required "runtime.database.server is required" .Values.runtime.database.server | quote }}
 - name: DB_URL
@@ -54,6 +54,10 @@ app.kubernetes.io/component: {{ .component }}
   value: {{ .Values.runtime.database.poolTimeout | quote }}
 - name: DB_POOL_PRE_PING
   value: {{ .Values.runtime.database.poolPrePing | quote }}
+{{- end }}
+
+{{- define "fleetoptimiser.runtimeEnv" -}}
+{{- include "fleetoptimiser.databaseEnv" . }}
 - name: RABBITMQ_PASSWORD
   valueFrom:
     secretKeyRef:
@@ -70,6 +74,14 @@ app.kubernetes.io/component: {{ .component }}
   value: {{ .Values.runtime.celery.resultTtlDays | quote }}
 - name: SEED_DUMMY_DATA
   value: {{ .Values.runtime.seedDummyData | quote }}
+{{- end }}
+
+{{- define "fleetoptimiser.frontendImage" -}}
+{{- printf "%s:%s" .Values.frontend.image.repository (.Values.frontend.image.tag | default .Chart.AppVersion) }}
+{{- end }}
+
+{{- define "fleetoptimiser.secretName" -}}
+{{- default "fleetoptimiser-secrets" .Values.secret.name | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{- define "fleetoptimiser.connectionCommand" -}}
