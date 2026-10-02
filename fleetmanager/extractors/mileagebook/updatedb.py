@@ -318,8 +318,8 @@ def set_roundtrips(ctx):
         )
         .filter(
             and_(
-                or_(Cars.deleted == False, Cars.deleted == 0, Cars.deleted == None),
-                or_(Cars.disabled == False, Cars.disabled == 0, Cars.disabled == None),
+                or_(Cars.deleted == False, Cars.deleted == None),
+                or_(Cars.disabled == False, Cars.disabled == None),
             ),
             Cars.omkostning_aar.isnot(None),
             or_(Cars.wltp_el.isnot(None), Cars.wltp_fossil.isnot(None)),
