@@ -81,7 +81,7 @@ def get_vehicles(session: Session):
     Will add associated objects to the vehicle object
     """
     deleted_vehicles_ids = session.execute(
-        select(Cars.id).where(Cars.deleted == 1)
+        select(Cars.id).where(Cars.deleted == True)
     ).fetchall()
 
     # to prevent sqlalchemy warning about coercing

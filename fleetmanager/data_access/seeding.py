@@ -5,6 +5,7 @@ import random
 from typing import Optional
 
 from sqlalchemy import delete, insert, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
 from fleetmanager.data_access.dbschema import (
@@ -74,6 +75,10 @@ def seed_cars(
     Session = sessionmaker(bind=engine)
 
     with Session.begin() as s:
+        existing_car = s.execute(select(Cars.id).limit(1)).first()
+        if existing_car:
+            return
+
         location_ids = (
             s.execute(select(AllowedStarts.id).order_by(AllowedStarts.id.asc()))
             .scalars()
@@ -281,5 +286,10 @@ def seed_dynamic_roundtrips_and_segments(
 
 def seed_db(engine):
     seed_allowed_starts(engine)
-    seed_cars(engine)
+    try:
+        seed_cars(engine)
+    except IntegrityError:
+        # every API worker and the Celery worker seed on startup; another one
+        # inserted the cars first and seeds the rest
+        return
     seed_dynamic_roundtrips_and_segments(engine)
