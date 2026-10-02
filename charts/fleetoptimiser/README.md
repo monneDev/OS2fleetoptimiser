@@ -10,12 +10,13 @@ This chart deploys the FleetOptimiser application workloads:
 - optional Kubernetes Ingress or Gateway API HTTPRoute for the frontend
 - optional Istio PeerAuthentication and AuthorizationPolicies
 - optional NetworkPolicies, PodDisruptionBudgets and VerticalPodAutoscalers
-- optional Secret, Vault Secrets Operator resources and Argo CD Application
+- optional Secret and Vault Secrets Operator resources
 
 RabbitMQ, Valkey, SQL, Keycloak, the Istio control plane, the ingress
 controller or gateway, cert-manager, Vault and Argo CD are supplied by the
 environment and are deliberately not bundled. Keep each environment's values
-file with that environment.
+file, and the Argo CD Application or other tooling that deploys the chart, with
+that environment.
 
 ## Exposing the frontend
 
@@ -69,13 +70,6 @@ completing.
   the ingress controller to the frontend and from the frontend to the
   backend. Callers from other namespaces that the mesh policies allow, such as
   a load test client, are blocked as well.
-
-## Argo CD
-
-`argocd.enabled` renders an Argo CD Application in the `argocd` namespace that
-syncs this chart from `argocd.repoURL` with `argocd.valueFiles`, which are
-relative to `argocd.chartPath`. Leave it disabled in the value files the
-Application itself uses.
 
 ## Service mesh
 

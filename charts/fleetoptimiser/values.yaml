@@ -182,14 +182,6 @@ networkPolicy:
       kubernetes.io/metadata.name: ingress-nginx
   ingressPodSelector: {}
 
-argocd:
-  enabled: false
-  repoURL: https://github.com/OS2fleetoptimiser/OS2fleetoptimiser.git
-  targetRevision: main
-  chartPath: charts/fleetoptimiser
-  # Relative to chartPath.
-  valueFiles: []
-
 # Istio integration. The chart only opts its own workloads into the mesh and
 # adds FleetOptimiser-specific policies; Istio is installed by the platform.
 mesh:
