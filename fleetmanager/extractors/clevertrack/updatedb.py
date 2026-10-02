@@ -189,8 +189,8 @@ def set_roundtrips(ctx):
             Cars.omkostning_aar.isnot(None),
             Cars.location.isnot(None),
             or_(Cars.wltp_el.isnot(None), Cars.wltp_fossil.isnot(None)),
-            Cars.disabled != 1,
-            Cars.deleted != 1,
+            Cars.disabled != True,
+            Cars.deleted != True,
         )
         .outerjoin(RoundTrips, RoundTrips.car_id == Cars.id)
         .group_by(Cars.id, Cars.plate, Cars.location)

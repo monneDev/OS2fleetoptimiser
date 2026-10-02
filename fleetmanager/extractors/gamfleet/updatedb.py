@@ -173,7 +173,7 @@ def set_vehicles(ctx, description_fields=None):
         if saved_vehicle is not None and int(vehicle.get("IsActive")) == 0:
             # disable the vehicle
             db_car = sess.get(Cars, vehicle_id)
-            db_car.disabled = 1
+            db_car.disabled = True
             sess.commit()
             logger.info(f"Disabled vehicle {vehicle_id}")
             continue
@@ -266,8 +266,8 @@ def set_roundtrips(ctx):
         )
         .filter(
             and_(
-                or_(Cars.deleted == False, Cars.deleted == 0, Cars.deleted == None),
-                or_(Cars.disabled == False, Cars.disabled == 0, Cars.disabled == None),
+                or_(Cars.deleted == False, Cars.deleted == None),
+                or_(Cars.disabled == False, Cars.disabled == None),
             ),
             Cars.omkostning_aar.isnot(None),
             or_(Cars.wltp_el.isnot(None), Cars.wltp_fossil.isnot(None)),
