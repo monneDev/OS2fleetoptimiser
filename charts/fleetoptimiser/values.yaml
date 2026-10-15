@@ -160,9 +160,10 @@ vault:
   rolloutRestart: true
 
 migration:
-  # The application currently creates missing tables through SQLAlchemy. This
-  # Job runs that operation once before application pods are rolled out.
-  enabled: false
+  # The backend does not create tables itself; this Job runs the Alembic
+  # migrations before application pods are rolled out. Only disable it when the
+  # migrations are run some other way.
+  enabled: true
   backoffLimit: 5
 
 pdb:

@@ -47,10 +47,7 @@ spec:
           imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
           securityContext:
             {{- toYaml .Values.containerSecurityContext | nindent 12 }}
-          command: ["/bin/sh", "-ec"]
-          args:
-            - |
-              python -c 'from fleetmanager.data_access.db_engine import engine_creator; engine_creator()'
+          command: ["python", "-m", "fleetmanager.data_access.migrate"]
           env:
             {{- include "fleetoptimiser.databaseEnv" . | nindent 12 }}
           resources:

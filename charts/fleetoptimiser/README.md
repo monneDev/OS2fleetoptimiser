@@ -50,9 +50,11 @@ With the last two, point the references at `secret.name` and its keys
 
 ## Database initialisation
 
-The backend creates missing tables through SQLAlchemy when it starts.
-`migration.enabled` also runs that step in a Job after install and before
-every upgrade, so an upgrade's schema is in place before its pods roll out.
+The backend does not create tables itself. `migration.enabled` (on by default)
+runs the Alembic migrations (`python -m fleetmanager.data_access.migrate`) in a
+Job after install and before every upgrade, so an upgrade's schema is in place
+before its pods roll out. On a first install the Job only runs once the pods
+exist, so the backend can fail until it has created the tables.
 With the mesh enabled, the Job gets no sidecar, which would keep it from
 completing.
 
