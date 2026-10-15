@@ -36,7 +36,7 @@ router = APIRouter(
 
 
 @router.get("/precision", response_model=List[ExtendedLocationInformation])
-async def location_precision(
+def location_precision(
     session: Session = Depends(get_session),
     start_date: date | datetime = None,
     end_date: date | datetime = None,
@@ -64,7 +64,7 @@ async def location_precision(
 
 
 @router.get("/location", response_model=list[AllowedStart])
-async def get_location_info(
+def get_location_info(
     session: Session = Depends(get_session),
     locations: Optional[List[int]] = Query(None)
 ):

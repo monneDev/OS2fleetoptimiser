@@ -1,0 +1,56 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "fleetoptimiser.fullname" . }}-default-deny-ingress
+  labels:
+    {{- include "fleetoptimiser.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "fleetoptimiser.selectorLabels" . | nindent 6 }}
+  policyTypes: [Ingress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "fleetoptimiser.fullname" . }}-allow-frontend
+  labels:
+    {{- include "fleetoptimiser.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "fleetoptimiser.componentSelectorLabels" (dict "root" . "component" "frontend") | nindent 6 }}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            {{- toYaml .Values.networkPolicy.ingressNamespaceSelector | nindent 12 }}
+          {{- with .Values.networkPolicy.ingressPodSelector }}
+          podSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.frontend.service.port }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "fleetoptimiser.fullname" . }}-allow-backend
+  labels:
+    {{- include "fleetoptimiser.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "fleetoptimiser.componentSelectorLabels" (dict "root" . "component" "backend") | nindent 6 }}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "fleetoptimiser.componentSelectorLabels" (dict "root" . "component" "frontend") | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.backend.service.port }}
+{{- end }}

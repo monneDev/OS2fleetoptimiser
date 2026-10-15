@@ -13,7 +13,7 @@ import pandas as pd
 import redis
 from dateutil.relativedelta import relativedelta
 from pydantic import BaseModel
-from sqlalchemy import DATE, BigInteger, and_, cast, distinct, func, literal_column, or_, select, text
+from sqlalchemy import DATE, BigInteger, and_, cast, distinct, extract, func, literal_column, or_, select, text
 from sqlalchemy.orm import Session
 from xlsxwriter.utility import xl_range, xl_rowcol_to_cell
 
@@ -1850,7 +1850,7 @@ def get_non_fossil_km_share(since_date: datetime.date, session: Session):
 def get_number_of_simulations(since_date: datetime.date, session: Session):
     # session is an input to keep consistent callable from kpis endpoint
     pattern = f"celery-task-meta-{os.getenv('CELERY_QUEUE', 'default')}:*simulation*"
-    r = redis.Redis.from_url(os.getenv('CELERY_BACKEND_URL'))
+    r = redis.Redis.from_url(os.getenv('CELERY_BACKEND_URL', 'redis://redis:6379'))
     simulation_count = 0
     for key in r.scan_iter(match=pattern, count=100):
         task_date = re.search("\d{4}-\d{2}-\d{2}", key.decode())
@@ -1885,6 +1885,8 @@ def get_usage_on_locations(session: Session, total_selected_time: float | int, s
         time_function = func.strftime("%s", RoundTrips.end_time) - func.strftime("%s", RoundTrips.start_time)
     elif dialect == "mysql":
         time_function = func.timestampdiff(text("SECOND"), RoundTrips.start_time, RoundTrips.end_time)
+    elif dialect == "postgresql":
+        time_function = extract("epoch", RoundTrips.end_time - RoundTrips.start_time)
     else:
         time_function = cast(
             func.datediff(literal_column("SECOND"), RoundTrips.start_time, RoundTrips.end_time),
@@ -1996,6 +1998,13 @@ def get_activity_on_locations(session: Session, since_date: datetime.date) -> Li
             func.year(func.coalesce(RoundTrips.start_time, first_date)),
             "-",
             func.date_format(func.coalesce(RoundTrips.start_time, first_date), '%v')
+        )
+    elif dialect == "postgresql":
+        # year of the week's monday to match week_mapping, which keys on the week start date
+        week_function = func.concat(
+            extract("year", func.date_trunc("week", func.coalesce(RoundTrips.start_time, first_date))),
+            "-",
+            extract("week", func.coalesce(RoundTrips.start_time, first_date))
         )
     else:
         week_function = func.concat(

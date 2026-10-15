@@ -6,7 +6,7 @@ from typing import Dict, List, TypedDict, Union
 
 import pandas as pd
 from pydantic import ValidationError
-from sqlalchemy import func, select, cast, Numeric
+from sqlalchemy import Numeric, cast, func, select
 from sqlalchemy.orm import Session
 from typing_extensions import NotRequired
 
@@ -81,7 +81,7 @@ def get_vehicles(session: Session):
     Will add associated objects to the vehicle object
     """
     deleted_vehicles_ids = session.execute(
-        select(Cars.id).where(Cars.deleted == 1)
+        select(Cars.id).where(Cars.deleted == True)
     ).fetchall()
 
     # to prevent sqlalchemy warning about coercing
@@ -374,7 +374,8 @@ def get_all_configurations_from_db(session: Session):
     return configurations
 
 
-def all_vagt_addresses_sqllite(session):
+def all_vagt_addresses(session):
+    """Load shift settings in Python; used for SQLite, PostgreSQL and MySQL."""
     vagter = (
         session.query(SimulationSettings)
         .filter(SimulationSettings.name.contains("vagt_"))
@@ -400,7 +401,8 @@ def all_vagt_addresses_sqllite(session):
     ]
 
 
-def all_vagt_address_postgress(session):
+def all_vagt_addresses_mssql(session):
+    """Load shift settings with MSSQL string functions (CHARINDEX)."""
     vagter = (
         session.query(
             SimulationSettings.id,
@@ -463,10 +465,10 @@ def load_shift_settings(
             .filter(SimulationSettings.name == f"vagt_{location}")
             .first()
         )
-    elif get_all and "sqlite" not in session.bind.engine.dialect.name:
-        return all_vagt_address_postgress(session)
+    elif get_all and session.bind.engine.dialect.name == "mssql":
+        return all_vagt_addresses_mssql(session)
     elif get_all:
-        return all_vagt_addresses_sqllite(session)
+        return all_vagt_addresses(session)
 
     if vagt is None:
         return []

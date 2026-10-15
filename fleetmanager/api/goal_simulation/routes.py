@@ -1,4 +1,5 @@
 import redis
+import os
 
 from celery.result import AsyncResult
 from datetime import datetime
@@ -152,6 +153,6 @@ async def get_goal_simulation(
 
 
 @router.get("/simulation-history", response_model=list[GoalSimulationHistory])
-async def get_goal_simulation_history(session: Session = Depends(get_session)):
-    r = redis.Redis(host="redis", port=6379)
+def get_goal_simulation_history(session: Session = Depends(get_session)):
+    r = redis.Redis.from_url(os.getenv("CELERY_BACKEND_URL", "redis://redis:6379"))
     return load_goal_simulation_history(session, r)

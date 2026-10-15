@@ -218,7 +218,7 @@ async def vehicles_validate_metadata(
 
 # get the bike configuration
 @router.get("/simulation-configurations", response_model=SimulationConfiguration)
-async def get_all_configurations(session: Session = Depends(get_session)):
+def get_all_configurations(session: Session = Depends(get_session)):
     """
     Get all the configuration settings exposed in the UI, which the user can change.
     """

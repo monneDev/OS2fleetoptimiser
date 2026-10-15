@@ -18,6 +18,25 @@ from .dbschema import (
     get_default_vehicle_types,
 )
 
+def database_settings(
+    db_name=None,
+    db_password=None,
+    db_user=None,
+    db_url=None,
+    db_server=None,
+) -> dict[str, str | None]:
+    """
+    Resolves the DB_* settings from arguments or env variables.
+    """
+    return {
+        "DB_NAME": db_name or os.getenv("DB_NAME"),
+        "DB_PASSWORD": db_password or os.getenv("DB_PASSWORD"),
+        "DB_USER": db_user or os.getenv("DB_USER"),
+        "DB_URL": db_url or os.getenv("DB_URL"),
+        "DB_SERVER": db_server or os.getenv("DB_SERVER"),
+    }
+
+
 def build_dsn(
     db_name=None,
     db_password=None,
@@ -27,19 +46,14 @@ def build_dsn(
 ) -> str | None:
     """
     Builds the connection DSN from arguments or DB_* env variables.
-    Returns None if any part is missing (callers fall back to SQLite).
+    Returns None if any part is missing.
     """
-    db_name = db_name or os.getenv("DB_NAME")
-    db_password = db_password or os.getenv("DB_PASSWORD")
-    db_user = db_user or os.getenv("DB_USER")
-    db_url = db_url or os.getenv("DB_URL")
-    db_server = db_server or os.getenv("DB_SERVER")
-
-    if not all((db_name, db_password, db_user, db_url, db_server)):
+    settings = database_settings(db_name, db_password, db_user, db_url, db_server)
+    if not all(settings.values()):
         return None
 
-    dsn = f"{db_server}://{db_user}:{db_password}@{db_url}/{db_name}"
-    if db_server == "mssql+pyodbc":
+    dsn = "{DB_SERVER}://{DB_USER}:{DB_PASSWORD}@{DB_URL}/{DB_NAME}".format(**settings)
+    if settings["DB_SERVER"] == "mssql+pyodbc":
         dsn += "?driver=ODBC+Driver+17+for+SQL+Server"
     return dsn
 
@@ -71,9 +85,27 @@ def engine_creator(
         db_engine = create_engine(
             dsn,
             pool_recycle=1800,
+            pool_size=int(os.getenv("DB_POOL_SIZE", "5")),
+            max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "10")),
+            pool_timeout=int(os.getenv("DB_POOL_TIMEOUT", "30")),
+            pool_pre_ping=os.getenv("DB_POOL_PRE_PING", "false").lower() == "true",
             # encoding="latin-1",
         )
     else:
+        settings = database_settings(db_name, db_password, db_user, db_url, db_server)
+        missing = [name for name, value in settings.items() if not value]
+        if len(missing) < len(settings):
+            raise RuntimeError(
+                f"Incomplete database configuration. Missing: {', '.join(missing)}. "
+                "Set all DB_* variables."
+            )
+        if os.getenv("ALLOW_IN_MEMORY_DATABASE", "false").lower() != "true":
+            raise RuntimeError(
+                "Database configuration is required. Set DB_SERVER, DB_URL, DB_NAME, "
+                "DB_USER and DB_PASSWORD. In-memory SQLite can only be enabled "
+                "explicitly with ALLOW_IN_MEMORY_DATABASE=true for local development "
+                "or tests."
+            )
         db_engine = create_engine(
             "sqlite:///file:fleetdb?mode=memory&cache=shared&uri=true",
             connect_args={"check_same_thread": False},

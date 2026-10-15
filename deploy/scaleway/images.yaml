@@ -1,0 +1,10 @@
+# The image tags Argo CD runs on the Scaleway cluster, read next to the chart
+# (clusters/scaleway/fleetoptimiser.nix in the infra repo). Written by
+# .github/workflows/scaleway-images.yaml; don't edit by hand. An empty tag
+# makes the next run build that image.
+frontend:
+  image:
+    tag: "00e706c2a88f0750954fd538005f9ff97b9d71ef"
+backend:
+  image:
+    tag: "00e706c2a88f0750954fd538005f9ff97b9d71ef"
