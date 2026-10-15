@@ -1,6 +1,6 @@
 name: Scaleway images
 
-# Every push to kubernetes-deployment builds the images whose code changed
+# Every push to main (merges included) builds the images whose code changed
 # since the tags recorded in deploy/scaleway/images.yaml, tags them with the
 # commit hash, and records the new tags there. Argo CD follows this branch and
 # rolls out whatever images.yaml names. The record commit is pushed with
@@ -8,7 +8,7 @@ name: Scaleway images
 
 on:
   push:
-    branches: [kubernetes-deployment]
+    branches: [main]
   workflow_dispatch:
 
 # One run at a time, so record commits don't race. A run dropped while queued
@@ -36,7 +36,7 @@ jobs:
       # newer tags since.
       - uses: actions/checkout@v7
         with:
-          ref: kubernetes-deployment
+          ref: main
           fetch-depth: 0
 
       - name: Find the images to rebuild
@@ -108,7 +108,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: kubernetes-deployment
+          ref: main
 
       - name: Record the new tags
         env:
