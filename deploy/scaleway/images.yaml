@@ -4,7 +4,7 @@
 # makes the next run build that image.
 frontend:
   image:
-    tag: ""
+    tag: "00e706c2a88f0750954fd538005f9ff97b9d71ef"
 backend:
   image:
-    tag: ""
+    tag: "00e706c2a88f0750954fd538005f9ff97b9d71ef"
